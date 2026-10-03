@@ -1,0 +1,333 @@
+/* ContractRisk AI — Single-Workflow Legal Tech AI Theme */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+/* Base Reset & Typography */
+html, body, .stApp {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color: #F1F5F9;
+}
+
+/* Explicitly protect Streamlit icon ligatures */
+[data-testid="stIconMaterial"],
+.material-symbols-rounded,
+.material-symbols-outlined,
+span[data-testid="stIconMaterial"],
+button span[data-testid="stIconMaterial"] {
+    font-family: 'Material Symbols Rounded', 'Material Symbols Outlined' !important;
+}
+
+/* Background */
+.stApp {
+    background-color: #080B12;
+}
+
+/* Hide Streamlit Header Chrome */
+header[data-testid="stHeader"] {
+    background: transparent;
+    height: 1rem;
+}
+
+/* Hide Streamlit Sidebar Completely */
+section[data-testid="stSidebar"] {
+    display: none !important;
+}
+
+/* Centered Single-Workflow Viewport (max-width: 960px) */
+.main .block-container {
+    max-width: 960px !important;
+    padding-top: 1rem !important;
+    padding-bottom: 1.5rem !important;
+    padding-left: 1.5rem !important;
+    padding-right: 1.5rem !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+}
+
+/* Typography Hierarchy */
+h1 {
+    font-size: 1.85rem !important;
+    font-weight: 800 !important;
+    letter-spacing: -0.02em !important;
+    color: #F8FAFC !important;
+    margin-top: 0 !important;
+    margin-bottom: 0.35rem !important;
+}
+
+h2 {
+    font-size: 1.35rem !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.015em !important;
+    color: #F1F5F9 !important;
+    margin-top: 0.5rem !important;
+    margin-bottom: 0.35rem !important;
+}
+
+h3 {
+    font-size: 1.1rem !important;
+    font-weight: 600 !important;
+    color: #E2E8F0 !important;
+    margin-top: 0.5rem !important;
+    margin-bottom: 0.25rem !important;
+}
+
+p, span, div {
+    font-size: 0.92rem;
+    line-height: 1.5;
+}
+
+.text-muted {
+    color: #8E9CAE !important;
+}
+
+.label-caps {
+    font-size: 0.72rem !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.07em !important;
+    color: #5A677A !important;
+}
+
+/* Compact Metric Boxes */
+.metric-box {
+    background-color: #0F141D;
+    border: 1px solid #1C2333;
+    border-radius: 8px;
+    padding: 14px 16px;
+    height: 100%;
+}
+
+.metric-box-title {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: #8E9CAE;
+    margin-bottom: 4px;
+}
+
+.metric-box-val {
+    font-size: 1.75rem;
+    font-weight: 700;
+    line-height: 1.1;
+    color: #F8FAFC;
+}
+
+/* Risk Badges */
+.badge-high {
+    display: inline-flex;
+    align-items: center;
+    background: rgba(239, 68, 68, 0.12);
+    color: #EF4444;
+    border: 1px solid rgba(239, 68, 68, 0.25);
+    padding: 2px 10px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+}
+
+.badge-med {
+    display: inline-flex;
+    align-items: center;
+    background: rgba(245, 158, 11, 0.12);
+    color: #F59E0B;
+    border: 1px solid rgba(245, 158, 11, 0.25);
+    padding: 2px 10px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+}
+
+.badge-low {
+    display: inline-flex;
+    align-items: center;
+    background: rgba(16, 185, 129, 0.12);
+    color: #10B981;
+    border: 1px solid rgba(16, 185, 129, 0.25);
+    padding: 2px 10px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+}
+
+.badge-done {
+    display: inline-flex;
+    align-items: center;
+    background: rgba(16, 185, 129, 0.12);
+    color: #10B981;
+    border: 1px solid rgba(16, 185, 129, 0.25);
+    padding: 3px 10px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+}
+
+/* Surface Panels */
+.panel-primary {
+    background-color: #0F141D;
+    border: 1px solid #1C2333;
+    border-radius: 8px;
+    padding: 18px 20px;
+}
+
+.panel-secondary {
+    background-color: #151B26;
+    border: 1px solid #222B3D;
+    border-radius: 8px;
+    padding: 14px 16px;
+}
+
+/* Contractual Text Block */
+.contract-text-panel {
+    background-color: #0A0E17;
+    border: 1px solid #1C2333;
+    border-left: 3px solid #3B82F6;
+    border-radius: 6px;
+    padding: 12px 16px;
+    color: #CBD5E1;
+    font-size: 0.88rem;
+    line-height: 1.6;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+/* Future Scenario Predictor Panel */
+.scenario-card-violet {
+    background-color: #0E0F1A;
+    border: 1px solid #2B264B;
+    border-left: 3px solid #8B5CF6;
+    border-radius: 8px;
+    padding: 18px;
+    margin-bottom: 16px;
+}
+
+/* Flow Arrows / Steps */
+.flow-arrow {
+    text-align: center;
+    color: #8B5CF6;
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin: 6px 0;
+}
+
+/* Analysis Screen Centered Layout */
+.analysis-screen-wrapper {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    min-height: calc(100vh - 3rem);
+    margin: 0 auto;
+}
+
+.analysis-card {
+    width: 100%;
+    max-width: 760px;
+    background-color: #0F141D;
+    border: 1px solid #1C2333;
+    border-radius: 8px;
+    padding: 14px 18px;
+}
+
+/* Pipeline Progress Stage Items */
+.stage-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 0.84rem;
+    margin-bottom: 3px;
+    background: #0D121B;
+    border: 1px solid #18202F;
+}
+
+.stage-done {
+    color: #10B981;
+    border-color: rgba(16, 185, 129, 0.25);
+    background: rgba(16, 185, 129, 0.05);
+}
+
+.stage-active {
+    color: #38BDF8;
+    border-color: rgba(56, 189, 248, 0.35);
+    background: rgba(56, 189, 248, 0.08);
+    font-weight: 600;
+}
+
+.stage-pending {
+    color: #64748B;
+    opacity: 0.7;
+}
+
+/* Streamlit Button Tweaks */
+.stButton > button {
+    border-radius: 6px !important;
+    padding: 8px 20px !important;
+    font-size: 0.92rem !important;
+    font-weight: 600 !important;
+    background-color: #151B26 !important;
+    border: 1px solid #222B3D !important;
+    color: #F1F5F9 !important;
+    transition: all 0.15s ease !important;
+}
+
+.stButton > button:hover {
+    border-color: #3B82F6 !important;
+    background-color: #1A2230 !important;
+    color: #FFFFFF !important;
+}
+
+.stButton > button[kind="primary"] {
+    background-color: #2563EB !important;
+    border: 1px solid #3B82F6 !important;
+    color: #FFFFFF !important;
+}
+
+.stButton > button[kind="primary"]:hover {
+    background-color: #1D4ED8 !important;
+}
+
+.stButton > button:disabled {
+    opacity: 0.45 !important;
+    cursor: not-allowed !important;
+    background-color: #111827 !important;
+    border-color: #1F2937 !important;
+    color: #64748B !important;
+}
+
+/* Upload Container Styling */
+div[data-testid="stFileUploader"] {
+    background: #0D121B;
+    border: 1px dashed #243046;
+    border-radius: 8px;
+    padding: 16px;
+    transition: border-color 0.2s ease;
+}
+
+div[data-testid="stFileUploader"]:hover {
+    border-color: #38BDF8;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: #080B12;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #1C2333;
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #2D3748;
+}

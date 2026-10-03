@@ -1,0 +1,26 @@
+# Verified Dependencies for ContractRisk AI
+# Note: Ensure PyTorch with CUDA 12.1 is installed (torch==2.5.1+cu121)
+
+pandas
+scikit-learn
+matplotlib
+seaborn
+transformers
+spacy
+sentence-transformers
+faiss-cpu
+langchain
+fastapi
+pydantic
+python-dotenv
+requests
+pymupdf
+python-docx
+pytest
+uvicorn
+python-multipart
+sqlalchemy>=2.0.0
+psycopg[binary]>=3.1.0
+alembic>=1.11.0
+streamlit
+plotly

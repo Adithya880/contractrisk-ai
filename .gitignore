@@ -1,0 +1,65 @@
+# Virtual Environments
+.venv/
+venv/
+env/
+ENV/
+
+# Python Bytecode & Caches
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# Environment Variables & Secrets
+.env
+.env.*
+!.env.example
+
+# IDE & Editor Configurations
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs & Temporary Execution Artifacts
+*.log
+scratch/
+tmp/
+temp/
+scenario_output.txt
+1.11.0
+
+# Machine Learning & Model Artifacts
+models/*
+!models/README.md
+*.pt
+*.pth
+*.bin
+*.safetensors
+*.onnx
+
+# Datasets & Contract Documents
+data/raw/*
+data/processed/*
+data/review/*
+data/splits/*
+!data/README.md
+*.pdf
+*.docx
+*.xlsx
+*.csv
+
+# Database & Local Runtime Files
+*.db
+*.sqlite
+*.sqlite3
+
+# Streamlit Secrets & Local Cache
+.streamlit/secrets.toml
+
+# Operating System Files
+.DS_Store
+Thumbs.db
