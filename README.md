@@ -211,13 +211,6 @@ Access the application in your browser at `http://localhost:8501`.
 
 *Note: Model binary checkpoints (`pytorch_model.bin`, ~438 MB), raw datasets, and local `.env` are excluded from Git tracking via `.gitignore`.*
 
-## Limitations
-
-- **No Scanned OCR**: Text extraction currently supports digital/selectable PDFs and DOCX files; scanned image PDFs require an external OCR pre-processing step.
-- **Clause-Level Stratification**: The source dataset consists of individual clauses without contract/template IDs; evaluation uses stratified clause-level splits rather than group-level contract splits.
-- **Probabilistic LLM Outputs**: Generative reasoning and scenario outputs remain probabilistic and may exhibit variation across runs.
-- **Conditional Projections**: Generated future scenarios represent conditional possibilities grounded in clause text, not deterministic factual predictions or legal certainties.
-- **Academic Prototype**: The platform is an academic research prototype designed for decision support, not an automated legal counsel system.
 
 ## Disclaimer
 
