@@ -9,7 +9,7 @@ import hashlib
 import os
 from pathlib import Path
 from typing import Union
-import fitz  # PyMuPDF
+import pymupdf as fitz
 
 from src.document_processing.exceptions import (
     CorruptedDocumentError,

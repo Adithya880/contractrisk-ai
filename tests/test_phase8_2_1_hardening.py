@@ -150,5 +150,5 @@ def test_clause_5_1_and_10_4_rule_matching_maintained(rule_engine):
 
     text_10_4 = "10.4 The Company may terminate this Agreement immediately without prior notice or refund of prepaid fees if Buyer fails to comply with any provision hereof."
     matches_10_4 = [m.rule_id for m in rule_engine.analyze_clause(text_10_4)]
-    assert "RULE_MOD_UNILATERAL" in matches_10_4
+    assert "RULE_MOD_UNILATERAL" not in matches_10_4
     assert "RULE_TERM_NO_NOTICE" in matches_10_4

@@ -47,6 +47,37 @@ def test_unilateral_modification_match(engine):
     assert any(m.rule_id == "RULE_MOD_UNILATERAL" for m in matches)
 
 
+def test_termination_clause_does_not_trigger_modification_rule(engine):
+    """
+    Regression test for Phase 1.1 Task 1:
+    A termination clause containing 'without prior notice' or 'sole discretion'
+    must NOT trigger RULE_MOD_UNILATERAL.
+    """
+    clause = (
+        "Either party may terminate this Agreement by providing 30 days' written notice. "
+        "However, the Service Provider reserves the right to terminate this Agreement immediately, "
+        "without prior notice or explanation, at its sole discretion."
+    )
+    matches = engine.analyze_clause(clause)
+    match_ids = [m.rule_id for m in matches]
+    assert "RULE_MOD_UNILATERAL" not in match_ids
+
+
+def test_unilateral_modification_variations(engine):
+    """
+    Verify genuine modification clauses trigger RULE_MOD_UNILATERAL correctly.
+    """
+    variations = [
+        "Company reserves the right to modify terms at any time in its sole discretion without prior notice.",
+        "Provider reserves the right to amend this agreement without prior notice.",
+        "Licensor may at its sole discretion modify the terms and conditions.",
+        "We reserve the right to change terms without notice.",
+    ]
+    for clause in variations:
+        matches = engine.analyze_clause(clause)
+        assert any(m.rule_id == "RULE_MOD_UNILATERAL" for m in matches), f"Failed for: {clause}"
+
+
 def test_empty_clause_returns_no_matches(engine):
     assert engine.analyze_clause("") == []
     assert engine.analyze_clause("   ") == []

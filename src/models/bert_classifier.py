@@ -13,12 +13,21 @@ class BertClauseClassifier(nn.Module):
     def __init__(self, model_name="bert-base-uncased", num_labels=41, dropout_prob=0.1):
         super(BertClauseClassifier, self).__init__()
         self.num_labels = num_labels
-        self.bert = AutoModelForSequenceClassification.from_pretrained(
-            model_name,
-            num_labels=num_labels,
-            hidden_dropout_prob=dropout_prob,
-            attention_probs_dropout_prob=dropout_prob
-        )
+        try:
+            self.bert = AutoModelForSequenceClassification.from_pretrained(
+                model_name,
+                num_labels=num_labels,
+                hidden_dropout_prob=dropout_prob,
+                attention_probs_dropout_prob=dropout_prob,
+                local_files_only=True
+            )
+        except Exception:
+            self.bert = AutoModelForSequenceClassification.from_pretrained(
+                model_name,
+                num_labels=num_labels,
+                hidden_dropout_prob=dropout_prob,
+                attention_probs_dropout_prob=dropout_prob
+            )
 
     def forward(self, input_ids, attention_mask, token_type_ids=None, labels=None):
         outputs = self.bert(

@@ -6,7 +6,7 @@ and aggregates contract-level risk using 0.6 * max + 0.4 * mean.
 """
 
 import math
-from typing import List, Sequence
+from typing import List, Sequence, Optional
 from src.risk_analysis.models import (
     RiskLevel,
     RiskRuleMatch,
@@ -20,7 +20,8 @@ RULE_WEIGHT = 0.35
 RAG_WEIGHT = 0.15
 LLM_WEIGHT = 0.20
 
-LOW_THRESHOLD = 35.0
+NORMAL_THRESHOLD = 20.0
+LOW_THRESHOLD = 40.0
 HIGH_THRESHOLD = 70.0
 
 
@@ -55,15 +56,38 @@ class HybridScorer:
         score = 100.0 * (1.0 - prod_remaining)
         return round(max(0.0, min(100.0, score)), 2)
 
-    def determine_risk_level(self, score: float) -> RiskLevel:
+    def determine_risk_level(
+        self,
+        score: float,
+        rule_matches: Optional[Sequence[RiskRuleMatch]] = None,
+        clause_type: Optional[str] = None
+    ) -> RiskLevel:
         """
-        Map numerical score (0-100) to RiskLevel:
-        - LOW: score < 35
-        - MEDIUM: 35 <= score < 70
-        - HIGH: score >= 70
+        Map numerical score (0-100) and evidence to RiskLevel:
+        - NORMAL: Ordinary contractual language with no significant risk indicators detected (score < 20.0)
+        - LOW: Minor potential risk (20.0 <= score < 40.0, or score < 20.0 with notable rule indicator)
+        - MEDIUM: Moderate risk (40.0 <= score < 70.0)
+        - HIGH: Significant risk (score >= 70.0)
         """
         clamped_score = max(0.0, min(100.0, float(score)))
-        if clamped_score < LOW_THRESHOLD:
+
+        has_severe_rule = False
+        if rule_matches:
+            has_severe_rule = any(float(r.severity_weight) >= 60.0 for r in rule_matches)
+
+        if clamped_score < NORMAL_THRESHOLD:
+            if has_severe_rule:
+                return RiskLevel.LOW
+            return RiskLevel.NORMAL
+        elif clamped_score < LOW_THRESHOLD:
+            # If no rules and score is slightly elevated only due to low-risk category baseline, keep NORMAL if < 25
+            if not rule_matches and clamped_score < 25.0:
+                benign_categories = {
+                    "Parties", "Agreement Date", "Effective Date",
+                    "Document Name", "Expiration Date", "Other"
+                }
+                if clause_type and clause_type in benign_categories:
+                    return RiskLevel.NORMAL
             return RiskLevel.LOW
         elif clamped_score < HIGH_THRESHOLD:
             return RiskLevel.MEDIUM
@@ -78,52 +102,27 @@ class HybridScorer:
         llm_score: float,
     ) -> RiskScoreBreakdown:
         """
-        Compute deterministic hybrid risk score:
-        Final = 0.30 * BERT + 0.35 * Rule + 0.15 * RAG + 0.20 * LLM
-        When BERT score is 0.0 (category 'Other'), active non-BERT component weights
-        are re-scaled so that real Rule and LLM risk signals are not suppressed.
+        Compute transparent deterministic hybrid risk score:
+        Final = 0.30 * S_BERT + 0.35 * S_Rule + 0.15 * S_RAG + 0.20 * S_LLM.
+        Strict static weights are maintained without silent dynamic rescaling.
+        If a component is genuinely 0 or has no signal, its contribution is 0.0.
         """
         c_bert = max(0.0, min(100.0, float(bert_score)))
         c_rule = max(0.0, min(100.0, float(rule_score)))
         c_rag = max(0.0, min(100.0, float(rag_score)))
         c_llm = max(0.0, min(100.0, float(llm_score)))
 
-        if c_bert == 0.0:
-            if c_rule > 0 or c_rag > 0:
-                w_bert = 0.0
-                w_rule = round(self.rule_weight / 0.70, 4)
-                w_rag = round(self.rag_weight / 0.70, 4)
-                w_llm = round(self.llm_weight / 0.70, 4)
-                raw_final = w_rule * c_rule + w_rag * c_rag + w_llm * c_llm
-            elif c_llm >= 50.0:
-                w_bert = 0.0
-                w_rule = 0.0
-                w_rag = 0.0
-                w_llm = 0.70
-                raw_final = w_llm * c_llm
-            else:
-                w_bert = self.bert_weight
-                w_rule = self.rule_weight
-                w_rag = self.rag_weight
-                w_llm = self.llm_weight
-                raw_final = (
-                    w_bert * c_bert +
-                    w_rule * c_rule +
-                    w_rag * c_rag +
-                    w_llm * c_llm
-                )
-        else:
-            w_bert = self.bert_weight
-            w_rule = self.rule_weight
-            w_rag = self.rag_weight
-            w_llm = self.llm_weight
-            raw_final = (
-                w_bert * c_bert +
-                w_rule * c_rule +
-                w_rag * c_rag +
-                w_llm * c_llm
-            )
+        w_bert = self.bert_weight
+        w_rule = self.rule_weight
+        w_rag = self.rag_weight
+        w_llm = self.llm_weight
 
+        raw_final = (
+            w_bert * c_bert +
+            w_rule * c_rule +
+            w_rag * c_rag +
+            w_llm * c_llm
+        )
         final_score = round(max(0.0, min(100.0, raw_final)), 2)
 
         return RiskScoreBreakdown(
@@ -135,8 +134,22 @@ class HybridScorer:
             rule_weight=round(w_rule, 4),
             rag_weight=round(w_rag, 4),
             llm_weight=round(w_llm, 4),
-            final_score=final_score
+            final_score=final_score,
         )
+
+    @staticmethod
+    def identify_missing_signals(breakdown: RiskScoreBreakdown) -> List[str]:
+        """Transparent reporting of components with zero contribution."""
+        missing = []
+        if breakdown.bert_component == 0.0:
+            missing.append("BERT (no category risk signal)")
+        if breakdown.rule_component == 0.0:
+            missing.append("Rule Engine (no pattern matched)")
+        if breakdown.rag_component == 0.0:
+            missing.append("RAG (no benchmark evidence)")
+        if breakdown.llm_component == 0.0:
+            missing.append("LLM (no model signal)")
+        return missing
 
     def aggregate_contract_risk(
         self,
@@ -153,8 +166,9 @@ class HybridScorer:
                 document_id=document_id,
                 source_filename=source_filename,
                 contract_risk_score=0.0,
-                contract_risk_level=RiskLevel.LOW,
+                contract_risk_level=RiskLevel.NORMAL,
                 analyzed_clauses_count=0,
+                normal_risk_clauses_count=0,
                 high_risk_clauses_count=0,
                 medium_risk_clauses_count=0,
                 low_risk_clauses_count=0,
@@ -170,9 +184,10 @@ class HybridScorer:
         contract_score = round(max(0.0, min(100.0, raw_contract_score)), 2)
         contract_level = self.determine_risk_level(contract_score)
 
-        high_count = sum(1 for a in assessments if a.risk_level == RiskLevel.HIGH)
-        med_count = sum(1 for a in assessments if a.risk_level == RiskLevel.MEDIUM)
+        normal_count = sum(1 for a in assessments if a.risk_level == RiskLevel.NORMAL)
         low_count = sum(1 for a in assessments if a.risk_level == RiskLevel.LOW)
+        med_count = sum(1 for a in assessments if a.risk_level == RiskLevel.MEDIUM)
+        high_count = sum(1 for a in assessments if a.risk_level == RiskLevel.HIGH)
 
         # Sort assessments descending by risk_score
         sorted_assessments = sorted(assessments, key=lambda a: a.risk_score, reverse=True)
@@ -183,6 +198,7 @@ class HybridScorer:
             contract_risk_score=contract_score,
             contract_risk_level=contract_level,
             analyzed_clauses_count=len(assessments),
+            normal_risk_clauses_count=normal_count,
             high_risk_clauses_count=high_count,
             medium_risk_clauses_count=med_count,
             low_risk_clauses_count=low_count,

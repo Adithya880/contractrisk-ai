@@ -67,12 +67,26 @@ def test_hybrid_score_exact_weights():
     breakdown_custom = scorer.compute_hybrid_score(50.0, 40.0, 20.0, 60.0)
     assert breakdown_custom.final_score == 44.0
 
+    # Test strictly transparent handling when components are zero (no dynamic rescaling)
+    breakdown_zero_bert = scorer.compute_hybrid_score(0.0, 40.0, 20.0, 60.0)
+    # 0.30*0 + 0.35*40 + 0.15*20 + 0.20*60 = 0 + 14 + 3 + 12 = 29.0
+    assert breakdown_zero_bert.final_score == 29.0
+    assert breakdown_zero_bert.bert_weight == 0.30
+    assert breakdown_zero_bert.rule_weight == 0.35
+
+    # Test missing signals identification
+    missing = HybridScorer.identify_missing_signals(breakdown_zero_bert)
+    assert "BERT (no category risk signal)" in missing
+    assert len(missing) == 1
+
 
 def test_risk_level_thresholds():
     scorer = HybridScorer()
-    assert scorer.determine_risk_level(10.0) == RiskLevel.LOW
-    assert scorer.determine_risk_level(34.9) == RiskLevel.LOW
-    assert scorer.determine_risk_level(35.0) == RiskLevel.MEDIUM
+    assert scorer.determine_risk_level(10.0) == RiskLevel.NORMAL
+    assert scorer.determine_risk_level(19.9) == RiskLevel.NORMAL
+    assert scorer.determine_risk_level(20.0) == RiskLevel.LOW
+    assert scorer.determine_risk_level(39.9) == RiskLevel.LOW
+    assert scorer.determine_risk_level(40.0) == RiskLevel.MEDIUM
     assert scorer.determine_risk_level(69.9) == RiskLevel.MEDIUM
     assert scorer.determine_risk_level(70.0) == RiskLevel.HIGH
     assert scorer.determine_risk_level(95.0) == RiskLevel.HIGH

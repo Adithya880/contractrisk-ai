@@ -40,6 +40,7 @@ class SegmentationResult(BaseModel):
     """
     document_id: str = Field(description="Parent document unique identifier.")
     source_filename: str = Field(description="Base filename of the input contract.")
+    document_title: Optional[str] = Field(default=None, description="Extracted contract title or header metadata.")
     clauses: List[SegmentedClause] = Field(default_factory=list, description="List of segmented clauses in document sequence.")
     total_clauses: int = Field(description="Total count of segmented clauses.")
     source_character_count: int = Field(description="Total character count of raw extracted document elements.")

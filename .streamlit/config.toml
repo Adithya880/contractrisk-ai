@@ -1,9 +1,22 @@
 [theme]
-primaryColor = "#3B82F6"
-backgroundColor = "#080B12"
-secondaryBackgroundColor = "#0F141D"
-textColor = "#F1F5F9"
-font = "sans serif"
+base = "dark"
+primaryColor = "#8B5CF6"
+backgroundColor = "#0B1020"
+secondaryBackgroundColor = "#182235"
+textColor = "#F8FAFC"
+borderColor = "#2D3A50"
+font = "sans-serif"
+baseRadius = "8px"
+buttonRadius = "8px"
+showWidgetBorder = true
+showSidebarBorder = true
+
+[theme.sidebar]
+backgroundColor = "#111827"
+secondaryBackgroundColor = "#182235"
+textColor = "#F8FAFC"
+borderColor = "#2D3A50"
+primaryColor = "#8B5CF6"
 
 [server]
 headless = true

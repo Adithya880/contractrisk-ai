@@ -178,3 +178,77 @@ def test_deterministic_clause_ids():
     assert res1.clauses[0].clause_id == "custom_hash_123:clause:001"
     assert res1.clauses[1].clause_id == "custom_hash_123:clause:002"
     assert res1.clauses[0].clause_id == res2.clauses[0].clause_id
+
+
+def test_leading_document_title_extracted_as_metadata_not_clause():
+    """
+    Verify leading document title (e.g. 'Service Agreement') is treated as document metadata,
+    not an enforceable contractual clause entity.
+    """
+    elements = [
+        DocumentElement(element_id="e0", element_type=ElementType.PARAGRAPH, text="Service Agreement", raw_text="Service Agreement", page_number=1, char_count=17, source_location="P1"),
+        DocumentElement(element_id="e1", element_type=ElementType.PARAGRAPH, text="1. Effective Date\nThis Agreement becomes effective on Nov 1, 2026.", raw_text="1. Effective Date\nThis Agreement becomes effective on Nov 1, 2026.", page_number=1, char_count=67, source_location="P1"),
+        DocumentElement(element_id="e2", element_type=ElementType.PARAGRAPH, text="2. Termination\nEither party may terminate upon 30 days notice.", raw_text="2. Termination\nEither party may terminate upon 30 days notice.", page_number=1, char_count=62, source_location="P1"),
+    ]
+    doc = _build_mock_document(elements)
+    segmenter = ClauseSegmenter()
+    result = segmenter.segment(doc)
+
+    assert result.document_title == "Service Agreement"
+    assert result.total_clauses == 2
+    assert result.clauses[0].clause_number == "1"
+    assert result.clauses[0].clause_heading == "Effective Date"
+    assert result.clauses[1].clause_number == "2"
+    assert result.clauses[1].clause_heading == "Termination"
+    assert all("Service Agreement" != c.clause_text.strip() for c in result.clauses)
+
+
+def test_meaningful_unnumbered_preamble_preserved():
+    """
+    Verify meaningful unnumbered preamble with operative legal language is preserved as a clause.
+    """
+    elements = [
+        DocumentElement(element_id="e0", element_type=ElementType.PARAGRAPH, text="Master Services Agreement", raw_text="Master Services Agreement", page_number=1, char_count=24, source_location="P1"),
+        DocumentElement(element_id="e1", element_type=ElementType.PARAGRAPH, text="This Agreement is entered into on October 30, 2026 by and between Party A and Party B. The parties hereby agree as follows:", raw_text="This Agreement is entered into on October 30, 2026 by and between Party A and Party B. The parties hereby agree as follows:", page_number=1, char_count=123, source_location="P1"),
+        DocumentElement(element_id="e2", element_type=ElementType.PARAGRAPH, text="1. Scope\nProvider shall perform services.", raw_text="1. Scope\nProvider shall perform services.", page_number=1, char_count=41, source_location="P1"),
+    ]
+    doc = _build_mock_document(elements)
+    segmenter = ClauseSegmenter()
+    result = segmenter.segment(doc)
+
+    assert result.document_title == "Master Services Agreement"
+    assert result.total_clauses == 2
+    assert result.clauses[0].clause_number is None
+    assert "entered into on October 30, 2026" in result.clauses[0].clause_text
+    assert result.clauses[1].clause_number == "1"
+
+
+def test_empty_document_segmentation():
+    """
+    Verify segmentation gracefully handles completely empty documents.
+    """
+    doc = _build_mock_document([])
+    segmenter = ClauseSegmenter()
+    result = segmenter.segment(doc)
+
+    assert result.total_clauses == 0
+    assert len(result.clauses) == 0
+    assert result.document_title is None
+    assert result.text_coverage_ratio == 1.0
+
+
+def test_short_standalone_heading():
+    """
+    Verify short standalone headings at top are handled as document title metadata.
+    """
+    elements = [
+        DocumentElement(element_id="e0", element_type=ElementType.PARAGRAPH, text="CONFIDENTIALITY AGREEMENT", raw_text="CONFIDENTIALITY AGREEMENT", page_number=1, char_count=25, source_location="P1"),
+        DocumentElement(element_id="e1", element_type=ElementType.PARAGRAPH, text="1. Obligations\nEach party shall protect confidential information.", raw_text="1. Obligations\nEach party shall protect confidential information.", page_number=1, char_count=65, source_location="P1"),
+    ]
+    doc = _build_mock_document(elements)
+    segmenter = ClauseSegmenter()
+    result = segmenter.segment(doc)
+
+    assert result.document_title == "CONFIDENTIALITY AGREEMENT"
+    assert result.total_clauses == 1
+    assert result.clauses[0].clause_number == "1"

@@ -101,3 +101,77 @@ def test_analyzer_analyze_document(sample_segmentation_result):
     assert summary.analyzed_clauses_count == 1
     assert summary.contract_risk_score > 0.0
     assert len(summary.highest_risk_assessments) == 1
+
+
+def test_clause_category_preserves_bert_classification_despite_high_risk_rule():
+    """
+    Regression test for Phase 1.1 Task 2:
+    A confident BERT category (e.g. 'Termination For Convenience' -> RiskCategory.TERMINATION)
+    must NOT be overwritten by a triggered high-severity risk rule.
+    """
+    text = (
+        "Either party may terminate this agreement for convenience upon 30 days prior written notice. "
+        "Vendor shall have unlimited liability for breaches of contract."
+    )
+    clause = SegmentedClause(
+        clause_id="c_term_01",
+        document_id="doc_101",
+        clause_number="4",
+        clause_heading="Termination",
+        clause_text=text,
+        source_type=SourceType.PDF,
+        source_pages=[1],
+        character_count=len(text),
+        word_count=len(text.split())
+    )
+
+    analyzer = ContractRiskAnalyzer()
+    assessment = analyzer.analyze_clause(
+        clause=clause,
+        document_id="doc_101",
+        predicted_clause_type="Termination For Convenience",
+        bert_confidence=0.85,
+        skip_llm=True
+    )
+
+    # Clause category must remain TERMINATION
+    assert assessment.risk_category == RiskCategory.TERMINATION
+    assert assessment.clause_type == "Termination For Convenience"
+
+    # But high-severity rule (RULE_LIAB_UNLIMITED) must still be detected and scored
+    rule_ids = [r.rule_id for r in assessment.detected_rules]
+    assert "RULE_LIAB_UNLIMITED" in rule_ids
+    assert assessment.score_breakdown.rule_component > 0.0
+
+
+def test_clause_category_fallback_to_rule_for_low_confidence_or_other():
+    """
+    Verify fallback behavior: when BERT prediction is uninformative ('Other' or low confidence),
+    the category of the highest-severity matched rule is used.
+    """
+    text = "Vendor shall under no circumstances have any unlimited liability for breaches."
+    clause = SegmentedClause(
+        clause_id="c_other_01",
+        document_id="doc_102",
+        clause_number="9",
+        clause_heading="General",
+        clause_text=text,
+        source_type=SourceType.PDF,
+        source_pages=[2],
+        character_count=len(text),
+        word_count=len(text.split())
+    )
+
+    analyzer = ContractRiskAnalyzer()
+    assessment = analyzer.analyze_clause(
+        clause=clause,
+        document_id="doc_102",
+        predicted_clause_type="Other",
+        bert_confidence=0.20,
+        skip_llm=True
+    )
+
+    # Because BERT was 'Other' and low confidence, fallback to rule category LIABILITY
+    assert assessment.risk_category == RiskCategory.LIABILITY
+    rule_ids = [r.rule_id for r in assessment.detected_rules]
+    assert "RULE_LIAB_UNLIMITED" in rule_ids

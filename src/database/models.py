@@ -84,7 +84,7 @@ class RiskAssessmentModel(Base):
         Integer, ForeignKey("clauses.id", ondelete="CASCADE"), unique=True, index=True, nullable=False
     )
     risk_category: Mapped[str] = mapped_column(String(64), nullable=False)
-    risk_level: Mapped[str] = mapped_column(String(16), nullable=False)  # LOW, MEDIUM, HIGH
+    risk_level: Mapped[str] = mapped_column(String(16), nullable=False)  # NORMAL, LOW, MEDIUM, HIGH
     final_score: Mapped[float] = mapped_column(Float, nullable=False)
     bert_score: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
     rule_score: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
@@ -92,7 +92,8 @@ class RiskAssessmentModel(Base):
     llm_score: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
     bert_clause_type: Mapped[str] = mapped_column(String(64), default="Other", nullable=False)
     bert_confidence: Mapped[float] = mapped_column(Float, default=1.0, nullable=False)
-    risk_explanation: Mapped[str] = mapped_column(Text, nullable=False)
+    risk_explanation: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    llm_inference_status: Mapped[str] = mapped_column(String(32), default="SKIPPED", nullable=False)
     uncertainty: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     key_risk_factors: Mapped[Optional[List[str]]] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, nullable=False)
@@ -181,6 +182,7 @@ class ContractSummaryModel(Base):
     )
     risk_score: Mapped[float] = mapped_column(Float, nullable=False)
     risk_level: Mapped[str] = mapped_column(String(16), nullable=False)
+    normal_risk_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     high_risk_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     medium_risk_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     low_risk_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)

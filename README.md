@@ -1,64 +1,28 @@
 # ContractRisk AI
 
-ContractRisk AI is an academic and research prototype for intelligent legal contract risk analysis, combining supervised deep learning, deterministic pattern matching, semantic vector search, and local generative AI to evaluate legal contracts and forecast downstream risk scenarios.
+ContractRisk AI is an AI-powered contract risk analysis system designed to evaluate commercial legal agreements. The platform ingests uploaded PDF and DOCX contracts, extracts and segments individual clauses, and identifies potentially risky or unfavorable contractual terms. By combining supervised classification, heuristic hazard detection, and vector precedent retrieval with a local Qwen3 language model, ContractRisk AI delivers comprehensive clause-by-clause risk assessments, flags contractual inconsistencies, and forecasts plausible future dispute scenarios without exposing confidential legal data to external cloud APIs.
 
-## Overview
+## Screenshots
 
-ContractRisk AI automates the end-to-end review of commercial contracts in PDF and DOCX formats. Instead of treating contract review as simple keyword search or black-box text generation, the system parses documents into discrete clauses and evaluates them through a multi-layered hybrid intelligence pipeline.
+### Contract Upload
+![Contract Upload Screen](docs/screenshots/upload.png)
+*Minimal upload interface supporting PDF and DOCX documents up to 20 MB.*
 
-The architecture combines supervised clause classification using fine-tuned BERT, high-precision hazard detection through a deterministic Regex Risk Engine, precedent retrieval via Sentence Transformers and FAISS, and natural language risk reasoning with a local Qwen3 4B LLM running via LM Studio. In addition to computing calibrated composite risk scores, the platform introduces the **Future Scenario Predictor** to model potential real-world operational and legal consequences for flagged provisions.
+### Contract Processing
+![Contract Processing Pipeline](docs/screenshots/processing.png)
+*Real-time pipeline monitor tracking progress across extraction, segmentation, classification, and reasoning stages.*
 
-## Key Features
+### Risk Summary
+![Overall Risk Summary Dashboard](docs/screenshots/risk-summary.png)
+*Overall contract risk score, distribution across risk categories, and contractual risk alerts.*
 
-- **Document Ingestion**: Extracts and normalizes structured text from PDF and DOCX agreements.
-- **Clause Segmentation**: Splits contract text into discrete, numbered clauses using spaCy.
-- **BERT Classification**: Classifies clauses into 41 legal categories using fine-tuned `bert-base-uncased`.
-- **Deterministic Regex Risk Engine**: Flags critical legal hazards (unlimited liability, unilateral termination, shortened notice) across 6 categories.
-- **Semantic Retrieval (RAG)**: Retrieves benchmark precedent clauses using Sentence Transformers and FAISS vector search.
-- **Local LLM Reasoning**: Performs contextual risk explanation and causal scenario forecasting using local Qwen3 4B via LM Studio without external API dependencies.
-- **Future Scenario Predictor**: Forecasts plausible downstream consequences, trigger conditions, and assumptions for high-risk clauses.
-- **Hybrid Risk Scoring**: Computes calibrated clause (0–100) and contract-level scores combining ML, rules, retrieval, and LLM reasoning.
-- **Single-Workflow Web UI**: Streamlined 5-state Streamlit application for uploading, live stage tracking, and interactive results inspection.
+### Future Scenario Prediction
+![Future Scenario Prediction Card](docs/screenshots/future-scenarios.png)
+*Hypothetical dispute scenarios and operational consequences forecasted by the local Qwen3 model.*
 
-## Problem
-
-Commercial contracts are lengthy, complex documents where ambiguous phrasing or unvetted boilerplate can expose organizations to severe financial, operational, or legal liability. Manual review is slow, expensive, and susceptible to fatigue. Existing automated tools typically stop at generic classification or static risk labels without contextualizing *why* a term is hazardous or *what operational outcomes* could arise if a contractual dispute occurs.
-
-## Primary Novelty — Future Scenario Predictor
-
-Traditional contract review systems focus exclusively on static classification:
-> *"Is this clause risky?"*
-
-ContractRisk AI additionally evaluates:
-> *"What could potentially happen if this contractual condition is triggered?"*
-
-For clauses flagged with medium or high risk, the Future Scenario Predictor synthesizes the clause text, triggered rules, and retrieved precedent to generate structured scenario cards comprising:
-- **Trigger Condition**: The specific operational event, milestone, or breach that activates the clause.
-- **Possible Consequence**: Plausible downstream financial, legal, or operational impacts.
-- **Supporting Evidence**: Verbatim excerpts from the contract text grounding the projection.
-- **Assumptions**: Operational or factual premises required for the consequence to materialize.
-- **Uncertainty**: Explicit framing clarifying that the scenario is a plausible possibility rather than a certainty.
-
-*Note: Future scenarios are conditional, probabilistic projections designed for risk awareness and do not constitute legal advice or guaranteed outcomes.*
-
-## System Architecture
-
-```mermaid
-flowchart TD
-    A["Contract File (.pdf / .docx)"] --> B["Document Processing (PyMuPDF / python-docx)"]
-    B --> C["Clause Segmentation (spaCy)"]
-    C --> D1["BERT Classification (41 Classes)"]
-    C --> D2["Regex Risk Engine (Hazard Patterns)"]
-    C --> D3["Embeddings (Sentence Transformers)"]
-    D3 --> D4["FAISS Vector Store"]
-    D1 & D2 & D4 --> E["RAG Context Assembly"]
-    E --> F["Local Qwen3 4B LLM (LM Studio)"]
-    F --> G["Future Scenario Predictor"]
-    D1 & D2 & D4 & G --> H["Hybrid Risk Scoring"]
-    H --> I[("PostgreSQL Database (SQLAlchemy)")]
-    I --> J["FastAPI Backend REST Service"]
-    J --> K["Streamlit User Interface"]
-```
+### Clause-by-Clause Analysis
+![Clause-by-Clause Analysis View](docs/screenshots/clause-analysis.png)
+*Interactive clause review showing original contract text alongside plain-English risk assessments and unfavorable terms.*
 
 ## Tech Stack
 

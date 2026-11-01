@@ -69,6 +69,27 @@ REQUIRED JSON FORMAT:
 """
 
 
+COMBINED_SCENARIO_SYSTEM_PROMPT = """You are ContractRisk AI's Legal Risk Evaluator & Future Scenario Predictor.
+Your task is to analyze the detected problematic clauses in a contract and generate ONE concise, coherent combined future risk scenario.
+
+STRICT GROUNDING & ANTI-HALLUCINATION RULES:
+1. Base the scenario strictly on the supplied clause text and detected risks.
+2. DO NOT invent unmentioned causes of action, unmentioned dollar figures, or unmentioned entities.
+3. DO NOT claim that an event is certain; phrase all future developments conditionally (e.g. 'If ... were to occur', 'could lead to').
+4. Produce ONE short explanation of what could happen (1-3 sentences maximum).
+5. Produce ONE concise possible consequence.
+6. Output strictly valid JSON matching this schema:
+{
+  "scenario_title": "<Concise descriptive title capturing the interrelated risks>",
+  "trigger_condition": "<Conditional triggering event>",
+  "scenario_description": "<One short explanation of what could happen>",
+  "possible_consequence": "<Concise potential legal or commercial impact>",
+  "assumptions": ["<Assumption 1>"],
+  "uncertainty": "<Statement of analytical uncertainty>"
+}
+"""
+
+
 class FutureScenarioPredictor:
     """
     Predictor module generating strictly evidence-grounded future risk scenarios for contract clauses.
@@ -98,7 +119,10 @@ class FutureScenarioPredictor:
         try:
             raw_json = self.generator.generate(
                 query="Generate grounded future risk scenario.",
-                context=context_prompt
+                context=context_prompt,
+                system_prompt=SCENARIO_SYSTEM_PROMPT,
+                max_tokens=800,
+                timeout=30,
             )
             # Validate JSON structure & enforce strict grounding constraints via Pydantic
             scenario = self._parse_and_validate_response(
@@ -134,6 +158,101 @@ class FutureScenarioPredictor:
             scenarios.append(scenario)
         return scenarios
 
+    def predict_combined_scenario(
+        self,
+        assessments: List[RiskAssessment],
+        document_id: Optional[str] = None
+    ) -> FutureScenario:
+        """
+        Generate ONE concise, coherent FutureScenario based on the most important
+        detected risks across the contract (Phase 1.2 Part 2-C).
+        Grounds scenario strictly in the actual contract text.
+        """
+        scenario_id = f"scen_comb_{uuid.uuid4().hex[:8]}"
+
+        # Filter to problematic clauses (HIGH and MEDIUM risk)
+        problematic = [a for a in assessments if a.risk_level in (RiskLevel.HIGH, RiskLevel.MEDIUM)]
+
+        # If no meaningful risks detected, return grounded low-risk baseline scenario
+        if not problematic:
+            return FutureScenario(
+                scenario_id=scenario_id,
+                clause_id="contract_summary",
+                clause_number=None,
+                scenario_title="Standard Contractual Performance Baseline",
+                trigger_condition="Performance of standard contractual obligations in ordinary course.",
+                scenario_description="No meaningful contractual risks or unilateral exposure patterns were identified in the analyzed provisions. The agreement contains standard reciprocal terms without compounding risk triggers.",
+                possible_consequence="Contract terms proceed according to standard mutual performance without compounding legal or commercial exposure.",
+                supporting_evidence=[],
+                assumptions=["Parties perform obligations in accordance with literal terms under applicable law"],
+                uncertainty="Analysis indicates standard terms across all analyzed clauses.",
+                fallback_active=False
+            )
+
+        # Collect triggering clauses and evidence citations
+        trigger_clauses = [f"Clause {a.clause_number or a.clause_id}" for a in problematic]
+        trigger_str = ", ".join(trigger_clauses)
+
+        citations: List[Citation] = []
+        for a in problematic:
+            citations.extend(self._build_citations_from_assessment(a))
+
+        # Check detected rules across problematic clauses
+        rule_ids = set()
+        for a in problematic:
+            for r in a.detected_rules:
+                rule_ids.add(r.rule_id)
+
+        # Build prompt for local Qwen3 model
+        clauses_context = "\n".join([
+            f"- {f'Clause {a.clause_number}' if a.clause_number else a.clause_id} ({a.clause_type}, Risk: {a.risk_level.value}): \"{a.clause_text}\"\n"
+            f"  Detected Risk Rules: {', '.join(r.description for r in a.detected_rules) if a.detected_rules else 'General Risk'}"
+            for a in problematic
+        ])
+
+        combined_context = (
+            "PROBLEMATIC CONTRACT CLAUSES:\n"
+            f"{clauses_context}\n\n"
+            "Generate the combined future scenario JSON now according to system instructions:"
+        )
+
+        try:
+            raw_json = self.generator.generate(
+                query="Generate grounded combined future scenario across contract risks.",
+                context=combined_context,
+                system_prompt=COMBINED_SCENARIO_SYSTEM_PROMPT,
+                max_tokens=1000,
+                timeout=45,
+            )
+            if isinstance(raw_json, dict) and "scenario_description" in raw_json:
+                title = str(raw_json.get("scenario_title") or f"Combined Risk Exposure ({trigger_str})").strip()
+                trigger = str(raw_json.get("trigger_condition") or f"If a dispute were to arise under {trigger_str}").strip()
+                desc = str(raw_json.get("scenario_description")).strip()
+                consequence = str(raw_json.get("possible_consequence") or "Potential financial or operational exposure without adequate contractual protection.").strip()
+                assumptions = raw_json.get("assumptions", ["Parties act according to literal contractual provisions."])
+                if not isinstance(assumptions, list):
+                    assumptions = [str(assumptions)]
+                uncertainty = str(raw_json.get("uncertainty") or "Scenario is hypothetical and grounded in literal contractual provisions.").strip()
+
+                return FutureScenario(
+                    scenario_id=scenario_id,
+                    clause_id=f"combined_{len(problematic)}_clauses",
+                    clause_number=trigger_str,
+                    scenario_title=title,
+                    trigger_condition=trigger,
+                    scenario_description=desc,
+                    possible_consequence=consequence,
+                    supporting_evidence=citations,
+                    assumptions=assumptions,
+                    uncertainty=uncertainty,
+                    fallback_active=False
+                )
+        except Exception as e:
+            # When Qwen3 is offline or generation fails, do not fabricate fake AI scenarios
+            return None
+
+        return None
+
     def predict_deep_scenario_and_explanation(
         self,
         clause_id: str,
@@ -154,8 +273,7 @@ class FutureScenarioPredictor:
         scenario_id = f"scen_{uuid.uuid4().hex[:8]}"
         rules_str = ", ".join([f"[{r.rule_id}] {r.description} (Severity: {r.severity_weight})" for r in detected_rules]) or "None"
 
-        context_prompt = (
-            f"{UNIFIED_DEEP_SYSTEM_PROMPT}\n\n"
+        evidence_prompt = (
             f"--- TARGET CONTRACTUAL EVIDENCE ---\n"
             f"Clause ID: {clause_id}\n"
             f"Clause Number: {clause_number or 'N/A'}\n"
@@ -164,13 +282,16 @@ class FutureScenarioPredictor:
             f"BERT Category: {clause_type} (Confidence: {bert_confidence:.2f})\n"
             f"Detected Rules: {rules_str}\n"
             f"Benchmark Evidence: {evidence_summary}\n\n"
-            f"Generate the unified risk evaluation and grounded future scenario JSON now:"
+            f"Generate the unified risk evaluation and grounded future scenario JSON now according to system instructions:"
         )
 
         try:
             raw_json = self.generator.generate(
                 query="Perform unified deep risk and scenario evaluation.",
-                context=context_prompt
+                context=evidence_prompt,
+                system_prompt=UNIFIED_DEEP_SYSTEM_PROMPT,
+                max_tokens=1200,
+                timeout=45,
             )
             llm_score = float(raw_json.get("llm_score", 50.0))
             llm_score = round(max(0.0, min(100.0, llm_score)), 2)
@@ -203,44 +324,8 @@ class FutureScenarioPredictor:
             return llm_score, explanation, key_factors, uncertainty, scenario
 
         except Exception as e:
-            heuristic_llm_score = 0.0
-            if detected_rules:
-                heuristic_llm_score = max(r.severity_weight for r in detected_rules)
-            else:
-                heuristic_llm_score = 50.0
-            heuristic_llm_score = round(max(0.0, min(100.0, heuristic_llm_score)), 2)
-
-            explanation = (
-                f"Automated risk explanation (fallback mode active): Clause evaluated under "
-                f"{clause_type} category with {len(detected_rules)} rule match(es)."
-            )
-            key_factors = [r.description for r in detected_rules] if detected_rules else [f"Category: {clause_type}"]
-            uncertainty = f"Fallback mode active ({type(e).__name__}); local LLM generation was not executed."
-
-            class _AssessAdapterFallback:
-                def __init__(self, **kwargs):
-                    self.__dict__.update(kwargs)
-
-            adapter_fallback = _AssessAdapterFallback(
-                clause_id=clause_id,
-                clause_number=clause_number,
-                clause_heading=clause_heading,
-                clause_text=clause_text,
-                clause_type=clause_type,
-                risk_category=risk_category,
-                risk_level=RiskLevel.MEDIUM,
-                risk_score=heuristic_llm_score,
-                risk_explanation=explanation,
-                detected_rules=detected_rules
-            )
-
-            fallback_scenario = self._build_fallback_scenario(
-                scenario_id=scenario_id,
-                assessment=adapter_fallback,
-                citations=citations,
-                error_message=str(e)
-            )
-            return heuristic_llm_score, explanation, key_factors, uncertainty, fallback_scenario
+            # Re-raise so analyzer explicitly records LLM failure/unavailability
+            raise e
 
     def _build_scenario_prompt(self, assessment: RiskAssessment) -> str:
         """Construct detailed evidence prompt for Qwen3."""
@@ -248,7 +333,6 @@ class FutureScenarioPredictor:
         evidence_str = assessment.evidence_summary or "No benchmark evidence."
 
         return (
-            f"{SCENARIO_SYSTEM_PROMPT}\n\n"
             f"--- TARGET CONTRACTUAL EVIDENCE ---\n"
             f"Clause ID: {assessment.clause_id}\n"
             f"Clause Number: {assessment.clause_number or 'N/A'}\n"
@@ -260,7 +344,7 @@ class FutureScenarioPredictor:
             f"Detected Rules: {rules_str}\n"
             f"Benchmark Evidence: {evidence_str}\n"
             f"Risk Explanation Summary: {assessment.risk_explanation}\n\n"
-            f"Generate the grounded hypothetical future scenario JSON now:"
+            f"Generate the grounded hypothetical future scenario JSON now according to system instructions:"
         )
 
     def _parse_and_validate_response(

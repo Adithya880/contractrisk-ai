@@ -160,6 +160,54 @@ class FAISSIndexManager:
 
         return results
 
+    def search_batch(
+        self,
+        queries: List[str],
+        embedder: ClauseEmbedder,
+        top_k: int = 5,
+        similarity_threshold: Optional[float] = None,
+    ) -> List[List[SearchResult]]:
+        """
+        Performs batched semantic similarity search against indexed clause vectors.
+        Vectorizes embedding and FAISS similarity lookup for all queries in a single pass.
+        """
+        if self._index.ntotal == 0 or not queries:
+            return [[] for _ in queries]
+
+        query_vecs = embedder.embed_texts(queries)
+        actual_top_k = min(top_k, self._index.ntotal)
+
+        scores, indices = self._index.search(query_vecs, actual_top_k)
+
+        all_results: List[List[SearchResult]] = []
+        for q_idx in range(len(queries)):
+            score_row = scores[q_idx]
+            idx_row = indices[q_idx]
+            res_row: List[SearchResult] = []
+            for score, vec_idx in zip(score_row, idx_row):
+                if vec_idx < 0 or vec_idx >= len(self._metadata):
+                    continue
+                sim_score = float(score)
+                if similarity_threshold is not None and sim_score < similarity_threshold:
+                    continue
+                meta = self._metadata[vec_idx]
+                res_row.append(
+                    SearchResult(
+                        clause_id=meta.clause_id,
+                        document_id=meta.document_id,
+                        clause_number=meta.clause_number,
+                        clause_heading=meta.clause_heading,
+                        clause_text=meta.clause_text,
+                        source_pages=meta.source_pages,
+                        similarity_score=sim_score,
+                        vector_index=meta.vector_index,
+                        hierarchy_level=meta.hierarchy_level,
+                        parent_clause_number=meta.parent_clause_number,
+                    )
+                )
+            all_results.append(res_row)
+        return all_results
+
     def save(self, dir_path: Union[str, Path]) -> None:
         """
         Persists FAISS index, metadata, and compatibility manifest to a directory.

@@ -72,3 +72,52 @@ class RAGRetriever:
             evidence_list.append(item)
 
         return evidence_list
+
+    def retrieve_evidence_batch(
+        self,
+        queries: List[str],
+        top_k: Optional[int] = None,
+        similarity_threshold: Optional[float] = None,
+    ) -> List[List[RAGEvidenceItem]]:
+        """
+        Retrieves top-k evidence clauses for multiple queries using batched embedding and search.
+
+        Args:
+            queries: List of search query strings.
+            top_k: Optional top-k count per query.
+            similarity_threshold: Optional similarity score threshold.
+
+        Returns:
+            List of lists of RAGEvidenceItem objects.
+        """
+        actual_top_k = top_k if top_k is not None else self.default_top_k
+        actual_threshold = (
+            similarity_threshold
+            if similarity_threshold is not None
+            else self.default_threshold
+        )
+
+        batch_search_results = self.index_manager.search_batch(
+            queries=queries,
+            embedder=self.embedder,
+            top_k=actual_top_k,
+            similarity_threshold=actual_threshold,
+        )
+
+        all_evidence: List[List[RAGEvidenceItem]] = []
+        for search_results in batch_search_results:
+            ev_list: List[RAGEvidenceItem] = [
+                RAGEvidenceItem(
+                    clause_id=res.clause_id,
+                    document_id=res.document_id,
+                    clause_number=res.clause_number,
+                    clause_heading=res.clause_heading,
+                    clause_text=res.clause_text,
+                    source_pages=res.source_pages,
+                    similarity_score=res.similarity_score,
+                )
+                for res in search_results
+            ]
+            all_evidence.append(ev_list)
+
+        return all_evidence

@@ -36,7 +36,10 @@ class ClauseEmbedder:
     def _load_model(self) -> SentenceTransformer:
         """Lazy loader for SentenceTransformer model."""
         if self._model is None:
-            self._model = SentenceTransformer(self.model_name, device=self.device)
+            try:
+                self._model = SentenceTransformer(self.model_name, device=self.device, local_files_only=True)
+            except Exception:
+                self._model = SentenceTransformer(self.model_name, device=self.device)
         return self._model
 
     def embed_texts(self, texts: List[str]) -> np.ndarray:

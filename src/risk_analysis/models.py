@@ -31,9 +31,18 @@ class RiskCategory(str, Enum):
 
 class RiskLevel(str, Enum):
     """Categorical risk severity levels."""
+    NORMAL = "NORMAL"
     LOW = "LOW"
     MEDIUM = "MEDIUM"
     HIGH = "HIGH"
+
+
+class LLMInferenceStatus(str, Enum):
+    """Status of Qwen3 LLM inference for a clause."""
+    SUCCESS = "SUCCESS"
+    UNAVAILABLE = "UNAVAILABLE"
+    FAILED = "FAILED"
+    SKIPPED = "SKIPPED"
 
 
 class RiskRuleMatch(BaseModel):
@@ -69,12 +78,16 @@ class RiskAssessment(BaseModel):
     clause_text: str = Field(..., description="Original full text of the clause")
     clause_type: str = Field(..., description="Predicted BERT clause category")
     bert_confidence: float = Field(..., ge=0.0, le=1.0, description="BERT softmax prediction confidence")
+    is_uncertain_classification: bool = Field(default=False, description="True if BERT confidence is below reliability threshold")
+    display_category: str = Field(default="", description="Category for user presentation, marking weak predictions as uncertain")
     risk_category: RiskCategory = Field(..., description="Primary risk domain for this clause")
     risk_score: float = Field(..., ge=0.0, le=100.0, description="Final deterministic risk score")
-    risk_level: RiskLevel = Field(..., description="LOW, MEDIUM, or HIGH risk rating")
+    risk_level: RiskLevel = Field(..., description="NORMAL, LOW, MEDIUM, or HIGH risk rating")
     score_breakdown: RiskScoreBreakdown = Field(..., description="Mathematical score component breakdown")
     detected_rules: List[RiskRuleMatch] = Field(default_factory=list, description="Rule matches triggered")
-    risk_explanation: str = Field(..., description="Grounded LLM explanation of risk factors")
+    intra_clause_contradictions: List[Any] = Field(default_factory=list, description="Internal contradictions or asymmetries inside this clause")
+    risk_explanation: Optional[str] = Field(default=None, description="Grounded Qwen3 LLM explanation of risk factors, if executed")
+    llm_inference_status: LLMInferenceStatus = Field(default=LLMInferenceStatus.SKIPPED, description="Status of Qwen3 inference (SUCCESS, UNAVAILABLE, FAILED, SKIPPED)")
     evidence_summary: str = Field(..., description="Summary of retrieval evidence or benchmark matches")
     key_risk_factors: List[str] = Field(default_factory=list, description="Extracted key risk points")
     evidence: List[Dict[str, Any]] = Field(default_factory=list, description="Retrieved benchmark evidence clauses")
@@ -87,6 +100,18 @@ class RiskAssessment(BaseModel):
     )
 
 
+class CrossClauseConflict(BaseModel):
+    """Details of a contradiction or dependency identified across or within contract clauses."""
+    conflict_id: str = Field(..., description="Unique conflict identifier")
+    conflict_type: str = Field(..., description="Classification of contradiction or dependency")
+    severity: RiskLevel = Field(RiskLevel.HIGH, description="Risk severity rating")
+    clause_ids: List[str] = Field(default_factory=list, description="IDs of involved clauses")
+    clause_numbers: List[str] = Field(default_factory=list, description="Section numbers of involved clauses")
+    explanation: str = Field(..., description="Concise explanation of the contradiction or dependency")
+    conflicting_excerpt_a: str = Field("", description="Key excerpt from first provision")
+    conflicting_excerpt_b: str = Field("", description="Key excerpt from second provision")
+
+
 class ContractRiskSummary(BaseModel):
     """Aggregate risk profile for an entire contract document."""
     document_id: str = Field(..., description="Document identifier")
@@ -94,6 +119,7 @@ class ContractRiskSummary(BaseModel):
     contract_risk_score: float = Field(..., ge=0.0, le=100.0, description="Aggregated overall document risk score")
     contract_risk_level: RiskLevel = Field(..., description="Overall contract risk level (LOW/MEDIUM/HIGH)")
     analyzed_clauses_count: int = Field(..., ge=0, description="Total clauses evaluated")
+    normal_risk_clauses_count: int = Field(default=0, ge=0, description="Count of NORMAL risk clauses")
     high_risk_clauses_count: int = Field(..., ge=0, description="Count of HIGH risk clauses")
     medium_risk_clauses_count: int = Field(..., ge=0, description="Count of MEDIUM risk clauses")
     low_risk_clauses_count: int = Field(..., ge=0, description="Count of LOW risk clauses")
@@ -104,6 +130,22 @@ class ContractRiskSummary(BaseModel):
     all_assessments: List[RiskAssessment] = Field(
         default_factory=list,
         description="All analyzed clause risk assessments"
+    )
+    combined_scenario: Optional[Any] = Field(
+        default=None,
+        description="Combined Future Scenario across contract risks"
+    )
+    cross_clause_conflicts: List[CrossClauseConflict] = Field(
+        default_factory=list,
+        description="Detected cross-clause contradictions and conflicts"
+    )
+    intra_clause_contradictions: List[CrossClauseConflict] = Field(
+        default_factory=list,
+        description="Detected intra-clause inconsistencies and unilateral asymmetries"
+    )
+    pipeline_timings: Dict[str, float] = Field(
+        default_factory=dict,
+        description="Execution timings in seconds per pipeline stage"
     )
     disclaimer: str = Field(
         default="Contract risk scores are automated decision-support signals and do NOT constitute formal legal advice.",

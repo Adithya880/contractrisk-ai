@@ -10,6 +10,13 @@ import requests
 from src.rag.generator import LLMGenerator, LLMGeneratorError, LMStudioConnectionError
 
 
+@pytest.fixture(autouse=True)
+def reset_generator_cache():
+    LLMGenerator.reset_cache()
+    yield
+    LLMGenerator.reset_cache()
+
+
 @patch("requests.post")
 @patch("requests.get")
 def test_llm_generator_success_parsing(mock_get, mock_post):
@@ -69,7 +76,10 @@ def test_llm_generator_markdown_backtick_json_stripping(mock_get, mock_post):
 
 
 @patch("requests.post")
-def test_llm_generator_connection_error(mock_post):
+@patch("requests.get")
+def test_llm_generator_connection_error(mock_get, mock_post):
+    mock_get.return_value.status_code = 200
+    mock_get.return_value.json.return_value = {"data": [{"id": "qwen3"}]}
     mock_post.side_effect = requests.exceptions.ConnectionError("Connection refused")
 
     generator = LLMGenerator(base_url="http://127.0.0.1:1234/v1")
@@ -78,9 +88,23 @@ def test_llm_generator_connection_error(mock_post):
 
 
 @patch("requests.post")
-def test_llm_generator_timeout_error(mock_post):
+@patch("requests.get")
+def test_llm_generator_timeout_error(mock_get, mock_post):
+    mock_get.return_value.status_code = 200
+    mock_get.return_value.json.return_value = {"data": [{"id": "qwen3"}]}
     mock_post.side_effect = requests.exceptions.Timeout("Request timed out")
 
     generator = LLMGenerator(base_url="http://127.0.0.1:1234/v1")
     with pytest.raises(LLMGeneratorError):
         generator.generate("Query?", "Context")
+
+
+@patch("requests.get")
+def test_llm_generator_offline_prevents_request(mock_get):
+    mock_get.side_effect = requests.exceptions.ConnectionError("Connection refused")
+
+    generator = LLMGenerator(base_url="http://127.0.0.1:1234/v1")
+    assert generator.is_available() is False
+    with pytest.raises(LMStudioConnectionError) as exc_info:
+        generator.generate("Query?", "Context")
+    assert "offline or unreachable" in str(exc_info.value)

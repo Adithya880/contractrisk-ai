@@ -1,7 +1,6 @@
 """
-Landing and Upload Screen for ContractRisk AI Single-Workflow Application.
-Implements State 1 (EMPTY) and State 2 (UPLOADED) with dynamic widget key reset
-and Same Document Protection.
+Contract Upload Screen for ContractRisk AI — Premium Dark Legal-Tech Dashboard.
+Single, minimal upload interface directly below subtitle (States 1: EMPTY and 2: UPLOADED).
 """
 
 import hashlib
@@ -10,39 +9,29 @@ from frontend.utils.formatting import safe_render_html
 
 
 def render_landing_view():
-    """Render the landing and upload interface (States 1: EMPTY and 2: UPLOADED)."""
+    """Render minimal upload interface directly below page subtitle."""
 
-    # Top Brand Header
+    # 1. Page logo, title, and subtitle
     safe_render_html(
         """
-        <div style="text-align: center; margin-top: 2rem; margin-bottom: 2.2rem;">
-            <div style="font-size: 2.8rem; color: #38BDF8; line-height: 1; margin-bottom: 0.75rem;">◈</div>
-            <h1 style="font-size: 2.1rem; font-weight: 800; letter-spacing: -0.02em; margin: 0 0 0.4rem 0;">
-                CONTRACTRISK <span style="color: #38BDF8;">AI</span>
-            </h1>
-            <div style="font-size: 1.05rem; font-weight: 600; color: #94A3B8; margin-bottom: 0.9rem;">
-                Intelligent Contract Risk Analysis
+        <div style="text-align: center; margin-top: 1.5rem; margin-bottom: 1.8rem;">
+            <div style="width: 40px; height: 40px; background: #182235; border: 1px solid #2D3A50; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; color: #8B5CF6; font-size: 1.4rem; font-weight: 800; box-shadow: 0 4px 12px rgba(139, 92, 246, 0.15); margin-bottom: 0.75rem;">
+                ◈
             </div>
-            <p style="font-size: 0.94rem; color: #64748B; max-width: 560px; margin: 0 auto; line-height: 1.6;">
-                Analyze contracts for potential risks using NLP, retrieval-augmented generation,
-                and a local language model.
+            <h1 style="font-size: 2.0rem; font-weight: 800; color: #F8FAFC; letter-spacing: -0.02em; margin: 0 0 0.35rem 0;">
+                Analyse Your Contract
+            </h1>
+            <p style="font-size: 0.92rem; color: #A1AFC2; max-width: 500px; margin: 0 auto; line-height: 1.5;">
+                Upload a contract to identify potential risks and unfavorable terms.
             </p>
         </div>
         """
     )
 
-    # Central Upload Area
-    upload_col1, upload_col2, upload_col3 = st.columns([1, 6, 1])
+    # 2. Centered Upload Area directly below subtitle
+    upload_col1, upload_col2, upload_col3 = st.columns([1.5, 5, 1.5])
 
     with upload_col2:
-        safe_render_html(
-            """
-            <div style="text-align: center; margin-bottom: 8px;">
-                <span class="label-caps">UPLOAD CONTRACT</span>
-            </div>
-            """
-        )
-
         uploader_key = st.session_state.get("uploader_key", 0)
         uploaded_file = st.file_uploader(
             "Upload Contract",
@@ -53,14 +42,14 @@ def render_landing_view():
             key=f"contract_uploader_{uploader_key}"
         )
 
+        st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
+
         if uploaded_file is not None:
             # -------------------------------------------------------------
-            # STATE 2: UPLOADED (Document selected, not yet analyzed)
+            # STATE 2: UPLOADED (File selected, ready to analyze)
             # -------------------------------------------------------------
             file_bytes = uploaded_file.getvalue()
             filename = uploaded_file.name
-            file_kb = len(file_bytes) / 1024
-            file_ext = filename.split(".")[-1].upper() if "." in filename else "PDF"
             file_hash = hashlib.sha256(file_bytes).hexdigest()
 
             # Record uploaded document in session state
@@ -69,54 +58,28 @@ def render_landing_view():
             st.session_state["current_file_hash"] = file_hash
             st.session_state["workflow_state"] = "UPLOADED"
 
-            # Render document chip
-            safe_render_html(
-                f"""
-                <div style="background: #0F141D; border: 1px solid #1C2333; border-radius: 8px; padding: 12px 16px; margin: 12px 0 16px 0; display: flex; justify-content: space-between; align-items: center;">
-                    <div style="display: flex; align-items: center; gap: 10px;">
-                        <span style="font-size: 1.25rem;">📄</span>
-                        <div>
-                            <strong style="color: #F8FAFC; font-size: 0.92rem;">{filename}</strong>
-                            <div style="color: #64748B; font-size: 0.78rem;">{file_ext} Document</div>
-                        </div>
-                    </div>
-                    <span style="color: #38BDF8; font-size: 0.82rem; font-weight: 600;">{file_kb:.1f} KB</span>
-                </div>
-                """
-            )
-
             # Analyze Contract Button (ENABLED)
-            if st.button("Analyze Contract", type="primary", width="stretch", key="btn_start_analysis"):
+            if st.button("Analyze Contract", type="primary", width="stretch", key="btn_start_analysis", icon=":material/analytics:"):
                 if len(file_bytes) > 20 * 1024 * 1024:
                     st.error("File size exceeds 20 MB maximum limit.")
                     return
 
-                # SAME DOCUMENT PROTECTION:
-                # If this document was already analyzed in this session, return cached terminal result
-                cached_analysis = st.session_state.get("analyzed_cache", {}).get(file_hash)
-                if cached_analysis:
-                    st.session_state["current_analysis"] = cached_analysis
-                    st.session_state["workflow_state"] = "COMPLETE"
-                    st.session_state["error_message"] = None
-                    st.rerun()
-                    return
-
-                # Single execution transition to ANALYZING
                 st.session_state["workflow_state"] = "ANALYZING"
                 st.session_state["pending_analysis"] = True
+                st.session_state["current_analysis"] = None
                 st.session_state["error_message"] = None
                 st.rerun()
 
         else:
             # -------------------------------------------------------------
-            # STATE 1: EMPTY (No document uploaded)
+            # STATE 1: EMPTY (No file selected)
             # -------------------------------------------------------------
             st.session_state["current_file_bytes"] = None
             st.session_state["current_filename"] = None
             st.session_state["current_file_hash"] = None
             st.session_state["workflow_state"] = "EMPTY"
 
-            safe_render_html("<div style='height: 8px;'></div>")
-            st.button("Analyze Contract", type="primary", width="stretch", disabled=True, key="btn_disabled_analysis")
+            # Analyze Contract Button (DISABLED)
+            st.button("Analyze Contract", type="primary", width="stretch", disabled=True, key="btn_disabled_analysis", icon=":material/analytics:")
 
-    safe_render_html("<div style='height: 40px;'></div>")
+    safe_render_html("<div style='height: 30px;'></div>")

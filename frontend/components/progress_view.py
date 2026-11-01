@@ -1,8 +1,6 @@
 """
-Analysis and Progress Screen for ContractRisk AI Single-Workflow Application (State 3: ANALYZING).
-Shows dedicated pipeline progress reflecting the 8 real pipeline stages during analysis,
-vertically and horizontally centered within the browser viewport with zero vertical scroll.
-Guarantees single execution per click and sets terminal State 4 (COMPLETE) or State 5 (ERROR).
+Analysis and Progress Screen for ContractRisk AI — Premium Dark Legal-Tech Dashboard.
+Displays focused pipeline progress reflecting the 8 real pipeline stages during analysis.
 """
 
 import time
@@ -13,19 +11,19 @@ from frontend.api_client import api_client, APIClientError
 from frontend.utils.formatting import safe_render_html, normalize_analysis_data
 
 PIPELINE_STAGES = [
-    "Document extraction",
-    "Clause segmentation",
-    "Clause classification",
-    "Risk detection",
-    "Evidence retrieval",
-    "Risk explanation",
-    "Future scenario generation",
-    "Final analysis",
+    "Extracting document text",
+    "Segmenting contract clauses",
+    "Classifying clause types",
+    "Scanning for risk indicators",
+    "Retrieving precedent benchmarks",
+    "Generating risk explanations",
+    "Predicting future dispute scenarios",
+    "Finalizing contract risk profile",
 ]
 
 
 def render_progress_view():
-    """Render dedicated analysis progress screen with compact, vertically centered layout."""
+    """Render analysis progress screen in dark legal-tech style."""
     file_bytes = st.session_state.get("current_file_bytes")
     filename = st.session_state.get("current_filename", "Contract Document")
 
@@ -34,7 +32,7 @@ def render_progress_view():
         st.rerun()
         return
 
-    # If current_analysis is already populated, immediately route to COMPLETE
+    # If current_analysis is already populated, route to COMPLETE
     if st.session_state.get("current_analysis") is not None:
         st.session_state["workflow_state"] = "COMPLETE"
         st.rerun()
@@ -43,31 +41,34 @@ def render_progress_view():
     # Single-run execution guard
     st.session_state["pending_analysis"] = False
 
-    # Container for the complete centered screen (header + card)
+    # Container for the progress card
     progress_card = st.empty()
 
     def build_screen_html(active_idx: int, pct: int, is_complete: bool = False) -> str:
         stage_rows = []
         for idx, stage_name in enumerate(PIPELINE_STAGES):
             if is_complete or idx < active_idx:
-                status_icon = '<span style="color: #10B981; font-weight: 700; margin-right: 8px;">✓</span>'
-                status_label = '<span style="color: #10B981; font-size: 0.74rem; font-weight: 600;">COMPLETED</span>'
-                row_class = "stage-item stage-done"
+                status_icon = '<span style="color: #10B981; font-weight: 700; margin-right: 10px; font-size: 0.95rem;">✓</span>'
+                status_label = '<span style="background: rgba(16, 185, 129, 0.12); color: #10B981; border: 1px solid rgba(16, 185, 129, 0.3); font-size: 0.70rem; font-weight: 700; padding: 2px 8px; border-radius: 9999px;">DONE</span>'
+                row_bg = "background: #111827; border: 1px solid #2D3A50;"
+                text_color = "#F8FAFC"
             elif idx == active_idx and not is_complete:
-                status_icon = '<span style="color: #38BDF8; font-weight: 700; margin-right: 8px;">●</span>'
-                status_label = '<span style="color: #38BDF8; font-size: 0.74rem; font-weight: 600;">IN PROGRESS</span>'
-                row_class = "stage-item stage-active"
+                status_icon = '<span style="color: #8B5CF6; font-weight: 700; margin-right: 10px; font-size: 0.95rem;">●</span>'
+                status_label = '<span style="background: rgba(139, 92, 246, 0.15); color: #8B5CF6; border: 1px solid rgba(139, 92, 246, 0.3); font-size: 0.70rem; font-weight: 700; padding: 2px 8px; border-radius: 9999px;">RUNNING</span>'
+                row_bg = "background: #202D42; border: 1px solid #8B5CF6;"
+                text_color = "#FFFFFF; font-weight: 600;"
             else:
-                status_icon = '<span style="color: #475569; font-weight: 700; margin-right: 8px;">○</span>'
-                status_label = '<span style="color: #475569; font-size: 0.74rem;">PENDING</span>'
-                row_class = "stage-item stage-pending"
+                status_icon = '<span style="color: #4B5563; font-weight: 700; margin-right: 10px; font-size: 0.95rem;">○</span>'
+                status_label = '<span style="color: #64748B; font-size: 0.70rem;">PENDING</span>'
+                row_bg = "background: transparent; border: 1px solid transparent;"
+                text_color = "#64748B"
 
             stage_rows.append(
                 f"""
-                <div class="{row_class}">
-                    <div>
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 7px 12px; margin-bottom: 4px; border-radius: 6px; {row_bg}">
+                    <div style="display: flex; align-items: center;">
                         {status_icon}
-                        <span>{idx + 1}. {stage_name}</span>
+                        <span style="font-size: 0.84rem; color: {text_color};">{stage_name}</span>
                     </div>
                     {status_label}
                 </div>
@@ -77,32 +78,34 @@ def render_progress_view():
         stages_content = "".join(stage_rows)
 
         html_raw = f"""
-        <div class="analysis-screen-wrapper">
+        <div style="max-width: 620px; margin: 2rem auto; padding: 0 1rem;">
             <!-- Header -->
-            <div style="text-align: center; margin-bottom: 12px;">
-                <div style="font-size: 1.5rem; color: #38BDF8; line-height: 1; margin-bottom: 3px;">◈</div>
-                <h2 style="font-size: 1.3rem; font-weight: 800; letter-spacing: -0.01em; margin: 0 0 2px 0;">
-                    CONTRACTRISK <span style="color: #38BDF8;">AI</span>
+            <div style="text-align: center; margin-bottom: 16px;">
+                <div style="width: 38px; height: 38px; background: #182235; border: 1px solid #2D3A50; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; color: #8B5CF6; font-size: 1.3rem; font-weight: 800; box-shadow: 0 4px 10px rgba(139, 92, 246, 0.2); margin-bottom: 6px;">
+                    ◈
+                </div>
+                <h2 style="font-size: 1.35rem; font-weight: 800; color: #F8FAFC; letter-spacing: -0.015em; margin: 0 0 3px 0;">
+                    Analyzing Contract
                 </h2>
-                <div style="font-size: 0.85rem; color: #94A3B8;">
-                    Analyzing: <strong style="color: #F8FAFC;">{filename}</strong>
+                <div style="font-size: 0.86rem; color: #A1AFC2;">
+                    Document: <strong style="color: #F8FAFC;">{filename}</strong>
                 </div>
             </div>
 
-            <!-- Progress Card (max-width: 760px) -->
-            <div class="analysis-card">
+            <!-- Progress Card -->
+            <div style="background: #182235; border: 1px solid #2D3A50; border-radius: 12px; padding: 20px 22px; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);">
                 <!-- Progress Bar Header -->
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                    <span class="label-caps" style="color: #38BDF8;">PIPELINE EXECUTION</span>
-                    <span style="font-family: 'JetBrains Mono', monospace; font-size: 1.05rem; font-weight: 700; color: #F8FAFC;">{pct}%</span>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <span style="font-size: 0.74rem; font-weight: 700; color: #8B5CF6; text-transform: uppercase; letter-spacing: 0.06em;">PROCESSING PROGRESS</span>
+                    <span style="font-family: 'JetBrains Mono', monospace; font-size: 1.05rem; font-weight: 800; color: #F8FAFC;">{pct}%</span>
                 </div>
 
-                <!-- Calibrated Progress Bar -->
-                <div style="background: #111827; height: 6px; border-radius: 3px; overflow: hidden; margin-bottom: 10px;">
-                    <div style="background: {'#10B981' if is_complete else '#38BDF8'}; width: {pct}%; height: 100%; border-radius: 3px; transition: width 0.3s ease;"></div>
+                <!-- Progress Bar -->
+                <div style="background: #111827; height: 6px; border-radius: 3px; overflow: hidden; margin-bottom: 14px;">
+                    <div style="background: {'#10B981' if is_complete else '#8B5CF6'}; width: {pct}%; height: 100%; border-radius: 3px; transition: width 0.3s ease;"></div>
                 </div>
 
-                <!-- Stage Checklist (All 8 Stages) -->
+                <!-- Stages -->
                 <div>
                     {stages_content}
                 </div>
@@ -111,74 +114,44 @@ def render_progress_view():
         """
         return textwrap.dedent(html_raw).strip()
 
-    # Initial state display (Stage 1 active, 12%)
-    progress_card.html(build_screen_html(0, 12, False))
+    import uuid
 
-    # Execute backend call in background executor
+    task_id = str(uuid.uuid4())
+    progress_card.html(build_screen_html(0, 0, False))
+
     with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-        future = executor.submit(api_client.analyze_contract, file_bytes, filename)
+        future = executor.submit(api_client.analyze_contract, file_bytes, filename, task_id)
 
-        # Monitor lifecycle without blocking Streamlit rendering
-        start_time = time.time()
         curr_stage = 0
-        curr_pct = 12
+        curr_pct = 0
 
         while not future.done():
-            elapsed = time.time() - start_time
-            # Lifecycle timing tracking server processing phases
-            if elapsed < 2.0:
-                curr_stage = 0
-                curr_pct = 12
-            elif elapsed < 5.0:
-                curr_stage = 1
-                curr_pct = 25
-            elif elapsed < 12.0:
-                curr_stage = 2
-                curr_pct = 37
-            elif elapsed < 25.0:
-                curr_stage = 3
-                curr_pct = 50
-            elif elapsed < 45.0:
-                curr_stage = 4
-                curr_pct = 62
-            elif elapsed < 75.0:
-                curr_stage = 5
-                curr_pct = 75
-            else:
-                curr_stage = 6
-                curr_pct = 87
+            progress_info = api_client.get_analysis_progress(task_id)
+            server_stage = progress_info.get("stage", 0)
+            server_pct = progress_info.get("pct", 0)
+
+            curr_stage = max(curr_stage, min(int(server_stage), 7))
+            curr_pct = max(curr_pct, min(int(server_pct), 95))
 
             progress_card.html(build_screen_html(curr_stage, curr_pct, False))
-            time.sleep(0.5)
+            time.sleep(0.15)
 
-        # Check result
         try:
             raw_res = future.result()
             normalized = normalize_analysis_data(raw_res)
 
-            # Display 100% completion state
             progress_card.html(build_screen_html(7, 100, True))
-            time.sleep(0.5)
+            time.sleep(0.2)
 
-            # Record in session cache for Same Document Protection
-            doc_hash = st.session_state.get("current_file_hash")
-            if doc_hash:
-                if "analyzed_cache" not in st.session_state:
-                    st.session_state["analyzed_cache"] = {}
-                st.session_state["analyzed_cache"][doc_hash] = normalized
-
-            # Set terminal State 4 (COMPLETE)
             st.session_state["current_analysis"] = normalized
             st.session_state["workflow_state"] = "COMPLETE"
-            st.session_state["error_message"] = None
             st.rerun()
 
-        except APIClientError as err:
+        except APIClientError as api_err:
+            st.session_state["error_message"] = str(api_err)
             st.session_state["workflow_state"] = "ERROR"
-            st.session_state["error_message"] = str(err)
             st.rerun()
-
-        except Exception as ex:
+        except Exception as e:
+            st.session_state["error_message"] = f"Analysis pipeline failed: {str(e)}"
             st.session_state["workflow_state"] = "ERROR"
-            st.session_state["error_message"] = str(ex)
             st.rerun()

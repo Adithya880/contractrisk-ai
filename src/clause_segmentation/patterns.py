@@ -139,6 +139,10 @@ def _split_heading_body(text: str, is_lettered: bool = False) -> tuple[Optional[
             parts = text.split(d, 1)
             heading = parts[0].strip()
             body = parts[1].strip()
+            # If delimiter is a period, ensure heading is not an operative sentence
+            if d == ". ":
+                if re.search(r"\b(shall|agrees?\s+to|agrees?\s+that|covenants?|warrants?|must\s+pay|can\s+|will\s+|hereby|is\s+responsible)\b", heading, re.IGNORECASE):
+                    continue
             if len(heading.split()) <= 10:
                 return heading, body
 

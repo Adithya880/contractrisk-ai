@@ -1,0 +1,82 @@
+{
+  "timestamp": "2026-11-01 11:34:18",
+  "bert_eval": {
+    "num_classes": 41,
+    "cuad_sample_accuracy": 0.7,
+    "mean_single_inference_ms": 45.39238000288606,
+    "long_clause_head_tail_ms": 17.015100020216778,
+    "long_clause_pred": "Uncapped Liability",
+    "batch_50_duration_s": 0.18468099998426624,
+    "throughput_clauses_per_sec": 270.73710887562726,
+    "ood_uncertainty_handling": [
+      {
+        "test_type": "Payment Terms (Non-CUAD)",
+        "predicted_cuad_class": "Minimum Commitment",
+        "confidence": 0.1439,
+        "correctly_flagged_uncertain": true
+      },
+      {
+        "test_type": "Routine Confidentiality (Non-CUAD)",
+        "predicted_cuad_class": "Audit Rights",
+        "confidence": 0.1227,
+        "correctly_flagged_uncertain": true
+      },
+      {
+        "test_type": "Preamble / Parties (Non-CUAD)",
+        "predicted_cuad_class": "Effective Date",
+        "confidence": 0.1268,
+        "correctly_flagged_uncertain": true
+      }
+    ]
+  },
+  "rule_eval": {
+    "total_compiled_rules": 39,
+    "toxic_test_cases": 16,
+    "toxic_recall": 1.0,
+    "benign_test_cases": 8,
+    "benign_false_positive_rate": 0.0,
+    "benign_specificity": 1.0,
+    "mean_regex_latency_ms": 0.14555937559634913
+  },
+  "conflict_eval": {
+    "total_conflicts_detected": 3,
+    "detection_latency_ms": 2.290100004756823,
+    "liab_intra_detected": true,
+    "term_intra_detected": true,
+    "cross_clause_detected": true,
+    "benign_clause_false_positives": false
+  },
+  "faiss_eval": {
+    "index_loaded": true,
+    "total_indexed_clauses": 9447,
+    "mean_retrieval_ms": 92.32072500162758,
+    "mean_top1_similarity_score": 0.639021247625351,
+    "score_threshold_configured": 0.65
+  },
+  "e2e_eval": {
+    "total_pipeline_ms": 22.623500000918284,
+    "mean_ms_per_clause": 5.655875000229571,
+    "overall_contract_risk_score": 39.03,
+    "c1_risk_level": "MEDIUM",
+    "c1_risk_score": 42.89,
+    "c1_rules_matched": [
+      "RULE_LIAB_UNLIMITED",
+      "RULE_LIAB_INTERNAL_CONTRADICTION"
+    ],
+    "c1_llm_status": "UNAVAILABLE",
+    "c2_risk_level": "MEDIUM",
+    "c2_risk_score": 48.37,
+    "c2_rules_matched": [
+      "RULE_TERM_CONVENIENCE_UNILATERAL",
+      "RULE_TERM_NO_NOTICE",
+      "RULE_TERM_ASYMMETRIC_NOTICE"
+    ],
+    "c3_risk_level": "NORMAL",
+    "c3_risk_score": 4.26,
+    "c3_rules_matched": [],
+    "c4_risk_level": "NORMAL",
+    "c4_risk_score": 4.6,
+    "c4_rules_matched": [],
+    "breakdown_weights_valid": true
+  }
+}

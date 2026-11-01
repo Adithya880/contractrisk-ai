@@ -39,16 +39,30 @@ class ContractRiskAPIClient:
             res = requests.get(url, timeout=5)
             if res.status_code == 200:
                 return res.json()
-            raise APIClientError(f"Failed to fetch model info (HTTP {res.status_code})")
+            return {"status": "error", "detail": f"HTTP {res.status_code}"}
         except Exception as e:
-            raise APIClientError(f"Model status query failed: {e}")
+            return {"status": "offline", "detail": str(e)}
 
-    def analyze_contract(self, file_bytes: bytes, filename: str) -> Dict[str, Any]:
+    def get_analysis_progress(self, task_id: str) -> Dict[str, Any]:
+        """Query GET /api/v1/analysis/progress/{task_id} endpoint."""
+        url = f"{self.base_url}/analysis/progress/{task_id}"
+        try:
+            res = requests.get(url, timeout=1.0)
+            if res.status_code == 200:
+                return res.json()
+        except Exception:
+            pass
+        return {"stage": 0, "pct": 0, "stage_name": "Document extraction"}
+
+    def analyze_contract(self, file_bytes: bytes, filename: str, task_id: Optional[str] = None) -> Dict[str, Any]:
         """Post contract PDF/DOCX bytes to POST /api/v1/analyze endpoint."""
         url = f"{self.base_url}/analyze"
         files = {"file": (filename, file_bytes, "application/octet-stream")}
+        headers = {}
+        if task_id:
+            headers["X-Task-ID"] = task_id
         try:
-            res = requests.post(url, files=files, timeout=self.timeout)
+            res = requests.post(url, files=files, headers=headers, timeout=self.timeout)
             if res.status_code == 200:
                 return res.json()
             else:
@@ -91,6 +105,29 @@ class ContractRiskAPIClient:
             if isinstance(e, APIClientError):
                 raise
             raise APIClientError(f"Failed to retrieve document details: {e}")
+
+    def get_rules(self) -> List[Dict[str, Any]]:
+        """Query GET /api/v1/rules endpoint with fallback to backend definitions."""
+        url = f"{self.base_url}/rules"
+        try:
+            res = requests.get(url, timeout=5)
+            if res.status_code == 200:
+                return res.json()
+        except Exception:
+            pass
+        try:
+            from src.risk_analysis.rules import RISK_RULES
+            return [
+                {
+                    "rule_id": r["rule_id"],
+                    "risk_category": r["risk_category"].value if hasattr(r["risk_category"], "value") else str(r["risk_category"]),
+                    "description": r["description"],
+                    "severity_weight": r["severity_weight"],
+                }
+                for r in RISK_RULES
+            ]
+        except Exception:
+            return []
 
 
 api_client = ContractRiskAPIClient()

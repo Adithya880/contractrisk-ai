@@ -79,17 +79,17 @@ def test_bert_other_zero_contribution(bert_mapper, scorer):
     assert cat == RiskCategory.OTHER
 
 
-def test_hybrid_score_no_zero_suppression(scorer):
-    """When BERT is 0.0 (Other), active Rule/LLM signals are scaled properly."""
-    # Rule = 70, LLM = 75, BERT = 0
+def test_hybrid_score_transparent_weights(scorer):
+    """When BERT is 0.0 (Other), transparent weights strictly apply without silent rescaling."""
+    # Rule = 70 (0.35 * 70 = 24.5), LLM = 75 (0.20 * 75 = 15.0), BERT = 0, RAG = 0 -> Final = 39.5
     breakdown = scorer.compute_hybrid_score(
         bert_score=0.0,
         rule_score=70.0,
         rag_score=0.0,
         llm_score=75.0
     )
-    assert breakdown.final_score >= 35.0, f"Score {breakdown.final_score} was suppressed below 35 (MEDIUM threshold)!"
-    assert breakdown.final_score >= 50.0, f"Score {breakdown.final_score} should reflect MEDIUM/HIGH risk!"
+    assert breakdown.final_score == 39.5, f"Expected transparent score 39.5, got {breakdown.final_score}"
+    assert breakdown.final_score >= 35.0, f"Score {breakdown.final_score} is correctly in MEDIUM risk range"
 
 
 def _make_clause(clause_id: str, clause_number: str, clause_heading: str, clause_text: str, page: int = 1) -> SegmentedClause:
